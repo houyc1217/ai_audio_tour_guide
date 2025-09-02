@@ -1,433 +1,274 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Audio Tour Agent - Powered by NetMind</title>
-    <meta name="description" content="Generate personalized audio tours with AI-powered research and expressive speech synthesis using NetMind API">
-    <meta name="keywords" content="AI, audio tour, travel, NetMind, TTS, tour guide">
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary-color: #2E86AB;
-            --secondary-color: #A23B72;
-            --accent-color: #F18F01;
-            --background-color: #F8F9FA;
-            --text-color: #212529;
-            --border-color: #DEE2E6;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            line-height: 1.6;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 2rem 0;
-            margin-bottom: 2rem;
-        }
-        
-        .welcome-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-            border-left: 5px solid var(--accent-color);
-        }
-        
-        .form-section {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-        }
-        
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            padding: 12px 30px;
-            font-weight: 600;
-            border-radius: 25px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
-            transform: translateY(-2px);
-        }
-        
-        .form-control, .form-select {
-            border-radius: 10px;
-            border: 2px solid var(--border-color);
-            padding: 12px 15px;
-            transition: border-color 0.3s ease;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(46, 134, 171, 0.25);
-        }
-        
-        .progress {
-            height: 25px;
-            border-radius: 15px;
-            background-color: #E9ECEF;
-        }
-        
-        .progress-bar {
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-            border-radius: 15px;
-            transition: width 0.3s ease;
-        }
-        
-        .audio-player {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin: 2rem 0;
-        }
-        
-        .footer {
-            background-color: #F8F9FA;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 1px solid var(--border-color);
-            text-align: center;
-        }
-        
-        .netmind-branding {
-            color: #6C757D;
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-        
-        .btn-netmind {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white;
-            padding: 12px 25px;
-            border-radius: 25px;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-netmind:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            color: white;
-            text-decoration: none;
-        }
-        
-        .loading {
-            display: none;
-        }
-        
-        .alert {
-            border-radius: 10px;
-            border: none;
-        }
-        
-        .interest-checkbox {
-            margin: 0.5rem 0;
-        }
-        
-        .range-output {
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-    </style>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>AI Audio Tour Agent</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.85.1/build/stlite.css" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.85.1/build/stlite.js"></script>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="container">
-            <div class="row">
-                <div class="col-12 text-center">
-                    <h1 class="display-4 mb-3">
-                        <i class="fas fa-map-marked-alt me-3"></i>
-                        AI Audio Tour Agent
-                    </h1>
-                    <p class="lead">Generate personalized audio tours with AI-powered research and expressive speech synthesis</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <streamlit-app>
+        <app-file name="streamlit_app.py" entrypoint>
+import streamlit as st
+import asyncio
+import json
+import time
+import requests
+from typing import List, Dict, Any
+
+# NetMind API Configuration
+class NetMindConfig:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = "https://api.netmind.ai/v1"
+        self.headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
     
-    <!-- Main Content -->
-    <div class="container">
-        <!-- Welcome Card -->
-        <div class="welcome-card">
-            <h3><i class="fas fa-star text-warning me-2"></i>Welcome to Your Personal Tour Guide!</h3>
-            <p class="mb-0">Enter your destination and interests below to generate a personalized audio tour. Our AI will research the location and create an engaging narrative with natural-sounding speech.</p>
-        </div>
+    def chat_completion(self, messages: List[Dict], model: str = "gpt-oss-20b"):
+        """Simple chat completion for content generation"""
+        try:
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers=self.headers,
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "max_tokens": 2000,
+                    "temperature": 0.7
+                },
+                timeout=30
+            )
+            if response.status_code == 200:
+                return response.json()["choices"][0]["message"]["content"]
+            else:
+                return f"Error: {response.status_code} - {response.text}"
+        except Exception as e:
+            return f"Request failed: {str(e)}"
+
+# Simple Tour Manager for stlite
+class SimpleTourManager:
+    def __init__(self, netmind_config):
+        self.netmind = netmind_config
+    
+    def generate_tour_content(self, location: str, interests: List[str], duration: int) -> str:
+        """Generate tour content using NetMind API"""
         
-        <!-- Form Section -->
-        <div class="form-section">
-            <form id="tourForm">
-                <div class="row">
-                    <!-- Left Column -->
-                    <div class="col-md-6">
-                        <div class="mb-4">
-                            <label for="location" class="form-label">
-                                <i class="fas fa-map-marker-alt me-2"></i>Location
-                            </label>
-                            <input type="text" class="form-control" id="location" placeholder="Enter a city, landmark, or address" required>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label class="form-label">
-                                <i class="fas fa-heart me-2"></i>Interests (Select all that apply)
-                            </label>
-                            <div class="interest-checkbox">
-                                <input type="checkbox" class="form-check-input" id="architecture" value="Architecture">
-                                <label class="form-check-label ms-2" for="architecture">Architecture</label>
-                            </div>
-                            <div class="interest-checkbox">
-                                <input type="checkbox" class="form-check-input" id="history" value="History">
-                                <label class="form-check-label ms-2" for="history">History</label>
-                            </div>
-                            <div class="interest-checkbox">
-                                <input type="checkbox" class="form-check-input" id="culinary" value="Culinary">
-                                <label class="form-check-label ms-2" for="culinary">Culinary</label>
-                            </div>
-                            <div class="interest-checkbox">
-                                <input type="checkbox" class="form-check-input" id="culture" value="Culture">
-                                <label class="form-check-label ms-2" for="culture">Culture</label>
-                            </div>
-                        </div>
+        # Calculate approximate word count based on duration
+        words_per_minute = 150  # Average speaking pace
+        target_words = duration * words_per_minute
+        
+        # Create comprehensive prompt
+        interests_str = ", ".join(interests)
+        
+        prompt = f"""Create an engaging audio tour guide script for {location}.
+        
+Focus on these interests: {interests_str}
+Target length: approximately {target_words} words (for {duration} minutes of audio)
+        
+Requirements:
+- Write in a conversational, engaging tone suitable for audio
+- Include fascinating stories, historical facts, and local insights
+- Structure with clear sections for each interest area
+- Use vivid descriptions that help listeners visualize the locations
+- Include practical tips and hidden gems
+- Make it feel like a knowledgeable local friend is giving the tour
+        
+Format the response as a flowing narrative suitable for text-to-speech conversion."""
+        
+        messages = [
+            {"role": "system", "content": "You are an expert tour guide with deep knowledge of world destinations. Create engaging, informative audio tour content."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        return self.netmind.chat_completion(messages)
+
+# Set page config
+st.set_page_config(
+    page_title="AI Audio Tour Agent",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# Initialize NetMind configuration
+if 'netmind_config' not in st.session_state:
+    # Using the provided API key
+    api_key = "b3e08a955ca24e9e80ffd7f073c2a010"
+    st.session_state.netmind_config = NetMindConfig(api_key)
+    st.session_state.tour_manager = SimpleTourManager(st.session_state.netmind_config)
+
+# Main UI
+st.title("🎧 AI Audio Tour Agent")
+st.markdown("""
+<div style='background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); 
+            padding: 20px; border-radius: 10px; margin-bottom: 30px;'>
+    <h3 style='color: white; margin: 0;'>Welcome to your personalized audio tour guide!</h3>
+    <p style='color: white; margin: 10px 0 0 0;'>Explore any location with an engaging, AI-generated tour tailored to your interests.</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Create layout
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    st.markdown("### 📍 Where would you like to explore?")
+    location = st.text_input(
+        "Location", 
+        placeholder="Enter a city, landmark, or location...",
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("### 🎯 What interests you?")
+    interests = st.multiselect(
+        "Interests",
+        options=["History", "Architecture", "Culinary", "Culture"],
+        default=["History", "Architecture"],
+        help="Select the topics you'd like to learn about",
+        label_visibility="collapsed"
+    )
+
+with col2:
+    st.markdown("### ⏱️ Tour Settings")
+    duration = st.slider(
+        "Tour Duration (minutes)",
+        min_value=1,
+        max_value=20,
+        value=5,
+        step=1,
+        help="Choose how long you'd like your tour to be"
+    )
+    
+    st.markdown("### 🎤 Voice Style")
+    voice_style = st.selectbox(
+        "Guide's Voice Style",
+        options=["Friendly & Casual", "Professional & Detailed", "Enthusiastic & Energetic"],
+        help="Select the personality of your tour guide"
+    )
+
+# Generate Tour Button
+if st.button("🚀 Generate Tour", type="primary", use_container_width=True):
+    if not location:
+        st.error("Please enter a location.")
+    elif not interests:
+        st.error("Please select at least one interest category.")
+    else:
+        with st.spinner(f"Creating your personalized tour of {location}..."):
+            try:
+                # Generate tour content
+                tour_content = st.session_state.tour_manager.generate_tour_content(
+                    location, interests, duration
+                )
+                
+                # Display the tour content
+                st.markdown("---")
+                st.markdown("## 📖 Your Personalized Tour")
+                
+                # Create an attractive display for the tour content
+                st.markdown(
+                    f"""
+                    <div style='background: #f8f9fa; padding: 20px; border-radius: 10px; 
+                               border-left: 4px solid #667eea; margin: 20px 0;'>
+                        <h4 style='color: #333; margin-top: 0;'>🎯 {location} Tour</h4>
+                        <p style='color: #666; margin-bottom: 15px;'>
+                            <strong>Interests:</strong> {', '.join(interests)} | 
+                            <strong>Duration:</strong> {duration} minutes | 
+                            <strong>Style:</strong> {voice_style}
+                        </p>
                     </div>
-                    
-                    <!-- Right Column -->
-                    <div class="col-md-6">
-                        <div class="mb-4">
-                            <label for="duration" class="form-label">
-                                <i class="fas fa-clock me-2"></i>Tour Duration: <span id="durationValue" class="range-output">5 minutes</span>
-                            </label>
-                            <input type="range" class="form-range" id="duration" min="3" max="15" value="5" step="1">
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="voiceStyle" class="form-label">
-                                <i class="fas fa-microphone me-2"></i>Voice Style
-                            </label>
-                            <select class="form-select" id="voiceStyle">
-                                <option value="friendly">Friendly</option>
-                                <option value="professional">Professional</option>
-                                <option value="enthusiastic">Enthusiastic</option>
-                                <option value="calm">Calm</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="apiKey" class="form-label">
-                                <i class="fas fa-key me-2"></i>NetMind API Key
-                            </label>
-                            <input type="password" class="form-control" id="apiKey" placeholder="Enter your NetMind API key" required>
-                            <div class="form-text">Get your API key from <a href="https://www.netmind.ai" target="_blank">NetMind.ai</a></div>
-                        </div>
-                    </div>
-                </div>
+                    """,
+                    unsafe_allow_html=True
+                )
                 
-                <div class="text-center">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-magic me-2"></i>Generate Audio Tour
-                    </button>
-                </div>
-            </form>
+                # Display tour content in expandable section
+                with st.expander("📝 Tour Content", expanded=True):
+                    st.markdown(tour_content)
+                
+                # Audio generation note (since TTS is complex for stlite)
+                st.info("""
+                    🎵 **Audio Generation Note**: 
+                    In this browser-based version, audio generation is simplified. 
+                    For full TTS functionality, please use the server-based version.
+                    You can copy the text above and use any text-to-speech service.
+                """)
+                
+                # Download option for the text
+                st.download_button(
+                    label="📄 Download Tour Text",
+                    data=tour_content,
+                    file_name=f"{location.lower().replace(' ', '_')}_tour.txt",
+                    mime="text/plain"
+                )
+                
+                st.success("✅ Tour generated successfully using NetMind AI!")
+                
+            except Exception as e:
+                st.error(f"❌ Error generating tour: {str(e)}")
+                st.info("Please check your internet connection and try again.")
+
+# Footer with NetMind branding
+st.markdown("---")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown(
+        """
+        <div style='text-align: center; padding: 20px;'>
+            <p style='color: #666; font-size: 14px; margin-bottom: 10px;'>⚡ Powered by NetMind Inference API</p>
         </div>
-        
-        <!-- Progress Section -->
-        <div id="progressSection" class="loading">
-            <div class="form-section">
-                <h4 class="mb-3">Generating Your Tour...</h4>
-                <div class="progress mb-3">
-                    <div class="progress-bar" role="progressbar" style="width: 0%" id="progressBar">
-                        <span id="progressText">Starting...</span>
-                    </div>
-                </div>
-                <p id="statusText" class="text-muted">Initializing tour generation...</p>
-            </div>
-        </div>
-        
-        <!-- Audio Player Section -->
-        <div id="audioSection" class="loading">
-            <div class="audio-player">
-                <h4 class="mb-3"><i class="fas fa-headphones me-2"></i>Your Audio Tour is Ready!</h4>
-                <audio id="audioPlayer" controls class="w-100 mb-3">
-                    Your browser does not support the audio element.
-                </audio>
-                <div class="mt-3">
-                    <a id="downloadLink" class="btn btn-success me-2" download="audio_tour.mp3">
-                        <i class="fas fa-download me-2"></i>Download Audio
-                    </a>
-                    <button class="btn btn-secondary" onclick="resetForm()">
-                        <i class="fas fa-redo me-2"></i>Generate Another Tour
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Error Section -->
-        <div id="errorSection" class="loading">
-            <div class="alert alert-danger" role="alert">
-                <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Error</h4>
-                <p id="errorMessage">An error occurred while generating your tour.</p>
-                <button class="btn btn-outline-danger" onclick="resetForm()">
-                    <i class="fas fa-redo me-2"></i>Try Again
-                </button>
-            </div>
-        </div>
-    </div>
+        """, 
+        unsafe_allow_html=True
+    )
     
-    <!-- Footer -->
-    <div class="footer">
-        <div class="container">
-            <div class="netmind-branding">
-                Powered by NetMind Inference API
-            </div>
-            <a href="https://www.netmind.ai/modelsLibrary" target="_blank" class="btn-netmind">
-                <i class="fas fa-rocket me-2"></i>Explore NetMind Model Library
-            </a>
-        </div>
-    </div>
+    # NetMind link button
+    if st.button("🚀 Explore NetMind Model Library", use_container_width=True):
+        st.markdown(
+            """
+            <script>
+                window.open('https://www.netmind.ai/modelsLibrary', '_blank');
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        st.success("Opening NetMind Model Library in a new tab...")
+        st.markdown("[Click here if the page didn't open automatically](https://www.netmind.ai/modelsLibrary)")
+
+# Add some custom CSS for better styling
+st.markdown("""
+<style>
+    .stButton > button {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
     
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- NetMind API Integration -->
-    <script src="api.js"></script>
+    .stButton > button:hover {
+        background: linear-gradient(90deg, #5a6fd8 0%, #6a4190 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
     
-    <script>
-        // Update duration display
-        document.getElementById('duration').addEventListener('input', function() {
-            document.getElementById('durationValue').textContent = this.value + ' minutes';
-        });
-        
-        // Form submission
-        document.getElementById('tourForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Get form data
-            const location = document.getElementById('location').value;
-            const duration = document.getElementById('duration').value;
-            const voiceStyle = document.getElementById('voiceStyle').value;
-            const apiKey = document.getElementById('apiKey').value;
-            
-            // Get selected interests
-            const interests = [];
-            document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
-                interests.push(checkbox.value);
-            });
-            
-            if (interests.length === 0) {
-                alert('Please select at least one interest.');
-                return;
-            }
-            
-            // Show progress section
-            showSection('progressSection');
-            
-            try {
-                await generateTour(location, interests, duration, voiceStyle, apiKey);
-            } catch (error) {
-                showError(error.message);
-            }
-        });
-        
-        async function generateTour(location, interests, duration, voiceStyle, apiKey) {
-            updateProgress(10, 'Initializing tour generation...');
-            
-            try {
-                // Initialize NetMind API
-                const api = new NetMindAPI(apiKey);
-                
-                updateProgress(25, 'Researching location and interests...');
-                
-                // Generate tour content using NetMind API
-                const result = await api.generateTourContent(location, interests, duration, voiceStyle);
-                
-                updateProgress(100, 'Tour generation complete!');
-                
-                // Create audio URL from blob
-                const audioUrl = URL.createObjectURL(result.audio);
-                
-                // Show audio player
-                setTimeout(() => {
-                    showAudio(audioUrl);
-                }, 500);
-                
-            } catch (error) {
-                console.error('Tour generation failed:', error);
-                
-                // Check if it's a CORS error
-                if (error.message.includes('CORS') || error.message.includes('fetch')) {
-                    showError('CORS Error: Direct API calls are blocked by the browser. Please use the Python Streamlit version or deploy with a backend proxy. See DEPLOYMENT.md for details.');
-                } else {
-                    showError(`Error: ${error.message}. Please check your API key and try again.`);
-                }
-            }
-        }
-        
-        function updateProgress(percent, message) {
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            const statusText = document.getElementById('statusText');
-            
-            progressBar.style.width = percent + '%';
-            progressText.textContent = percent + '%';
-            statusText.textContent = message;
-        }
-        
-        function showSection(sectionId) {
-            // Hide all sections
-            document.querySelectorAll('.loading').forEach(section => {
-                section.style.display = 'none';
-            });
-            
-            // Show target section
-            document.getElementById(sectionId).style.display = 'block';
-        }
-        
-        function showError(message) {
-            document.getElementById('errorMessage').textContent = message;
-            showSection('errorSection');
-        }
-        
-        function showAudio(audioUrl) {
-            const audioPlayer = document.getElementById('audioPlayer');
-            const downloadLink = document.getElementById('downloadLink');
-            
-            audioPlayer.src = audioUrl;
-            downloadLink.href = audioUrl;
-            
-            showSection('audioSection');
-        }
-        
-        function resetForm() {
-            document.getElementById('tourForm').reset();
-            document.getElementById('durationValue').textContent = '5 minutes';
-            document.querySelectorAll('.loading').forEach(section => {
-                section.style.display = 'none';
-            });
-        }
-        
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-    </script>
+    .stSelectbox > div > div {
+        border-radius: 5px;
+    }
+    
+    .stTextInput > div > div > input {
+        border-radius: 5px;
+    }
+    
+    .stMultiSelect > div > div {
+        border-radius: 5px;
+    }
+</style>
+""", unsafe_allow_html=True)
+        </app-file>
+        <app-requirements>
+            requests
+        </app-requirements>
+    </streamlit-app>
 </body>
 </html>
