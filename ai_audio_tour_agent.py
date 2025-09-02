@@ -172,3 +172,29 @@ if st.button("Generate Tour", type="primary"):
             else:
                 st.warning("Tip: To generate audio, please configure NetMind API key in the sidebar for voice synthesis functionality.")
                 st.info("You can still view the text tour content above. Voice synthesis uses NetMind's Chatterbox TTS model.")
+
+# Footer with NetMind branding
+st.markdown("---")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown(
+        """
+        <div style='text-align: center; padding: 20px;'>
+            <p style='color: #666; font-size: 14px; margin-bottom: 10px;'>Powered by NetMind Inference API</p>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+    
+    # NetMind link button
+    if st.button("Explore NetMind Model Library", use_container_width=True):
+        st.markdown(
+            """
+            <script>
+                window.open('https://www.netmind.ai/modelsLibrary', '_blank');
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        st.success("Opening NetMind Model Library in a new tab...")
+        st.markdown("[Click here if the page didn't open automatically](https://www.netmind.ai/modelsLibrary)")
