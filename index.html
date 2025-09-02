@@ -31,23 +31,61 @@ class NetMindConfig:
     def chat_completion(self, messages: List[Dict], model: str = "gpt-oss-20b"):
         """Simple chat completion for content generation"""
         try:
+            import json as json_lib
             response = requests.post(
                 f"{self.base_url}/chat/completions",
                 headers=self.headers,
-                json={
+                data=json_lib.dumps({
                     "model": model,
                     "messages": messages,
                     "max_tokens": 2000,
                     "temperature": 0.7
-                },
-                timeout=30
+                }),
+                timeout=60
             )
             if response.status_code == 200:
-                return response.json()["choices"][0]["message"]["content"]
+                result = response.json()
+                return result["choices"][0]["message"]["content"]
             else:
-                return f"Error: {response.status_code} - {response.text}"
+                # Return a demo tour content when API fails
+                return self._get_demo_content(messages[1]["content"] if len(messages) > 1 else "")
         except Exception as e:
-            return f"Request failed: {str(e)}"
+            # Return demo content when request fails
+            return self._get_demo_content(messages[1]["content"] if len(messages) > 1 else "")
+    
+    def _get_demo_content(self, prompt: str) -> str:
+        """Return demo tour content when API is unavailable"""
+        location = "London"  # Default location
+        if "location" in prompt.lower():
+            # Try to extract location from prompt
+            lines = prompt.split('\n')
+            for line in lines:
+                if 'for' in line and len(line.split()) > 2:
+                    potential_location = line.split('for')[1].split('.')[0].strip()
+                    if potential_location:
+                        location = potential_location
+                        break
+        
+        return f"""Welcome to {location}! 🏛️
+
+**Historical Highlights**
+This magnificent city has stood as a testament to human civilization for centuries. From ancient foundations to modern marvels, every street tells a story of triumph, innovation, and cultural evolution.
+
+**Architectural Wonders**
+As you explore, you'll notice the stunning blend of architectural styles that define this cityscape. Gothic spires reach toward the sky while modern glass structures reflect the ambitions of contemporary design.
+
+**Cultural Treasures**
+The local culture is rich with traditions passed down through generations. Street markets buzz with activity, local artisans display their crafts, and the aroma of traditional cuisine fills the air.
+
+**Culinary Delights**
+No visit would be complete without sampling the local gastronomy. From time-honored recipes to innovative fusion dishes, the culinary scene here offers something for every palate.
+
+**Hidden Gems**
+Beyond the famous landmarks, discover quiet courtyards, charming cafes, and local gathering spots where residents share stories and laughter.
+
+*Note: This is a demo tour generated when the NetMind API is unavailable. For personalized, location-specific content, please ensure proper API connectivity.*
+
+Enjoy your exploration! 🌟"""
 
 # Simple Tour Manager for stlite
 class SimpleTourManager:
