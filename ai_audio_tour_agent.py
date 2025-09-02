@@ -43,16 +43,32 @@ st.set_page_config(
 with st.sidebar:
     st.title("Settings")
     
-    # Display current model information
-    st.info("Currently using NetMind gpt-oss-20b model for content generation and TTS voice synthesis")
+    # NetMind API Key input
+    st.markdown("### NetMind API Configuration")
+    netmind_api_key = st.text_input(
+        "NetMind API Key",
+        type="password",
+        placeholder="Enter your NetMind API key...",
+        help="Get your API key from NetMind platform"
+    )
     
-    # NetMind API配置 (hidden, using default key)
-    netmind_api_key = "b3e08a955ca24e9e80ffd7f073c2a010"
-    # Setup NetMind API configuration
-    setup_netmind_api(netmind_api_key)
-    st.session_state["NETMIND_API_KEY"] = netmind_api_key
-    # Configure agents library to use NetMind client
-    agents.set_default_openai_client(get_netmind_model(), use_for_tracing=False)
+    if netmind_api_key:
+        try:
+            # Setup NetMind API configuration
+            setup_netmind_api(netmind_api_key)
+            st.session_state["NETMIND_API_KEY"] = netmind_api_key
+            # Configure agents library to use NetMind client
+            agents.set_default_openai_client(get_netmind_model(), use_for_tracing=False)
+            st.success("✅ NetMind API configured successfully")
+            
+            # Display current model information
+            st.info("Currently using NetMind gpt-oss-20b model for content generation and TTS voice synthesis")
+        except Exception as e:
+            st.error(f"❌ API configuration failed: {str(e)}")
+            st.session_state["NETMIND_API_KEY"] = None
+    else:
+        st.warning("⚠️ Please enter your NetMind API key to use the service")
+        st.session_state["NETMIND_API_KEY"] = None
 
 # Main content
 st.title("AI Audio Tour Agent")
@@ -103,8 +119,8 @@ with col2:
 
 # Generate Tour Button
 if st.button("Generate Tour", type="primary"):
-    if "NETMIND_API_KEY" not in st.session_state:
-        st.error("Please enter NetMind API key in the sidebar.")
+    if not st.session_state.get("NETMIND_API_KEY"):
+        st.error("Please enter your NetMind API key in the sidebar first.")
     elif not location:
         st.error("Please enter a location.")
     elif not interests:
@@ -121,7 +137,7 @@ if st.button("Generate Tour", type="primary"):
                 st.markdown(final_tour)
             
             # Add a progress bar for audio generation
-            if "NETMIND_API_KEY" in st.session_state:
+            if st.session_state.get("NETMIND_API_KEY"):
                 import time
                 start_time = time.time()
                 progress_bar = st.progress(0)

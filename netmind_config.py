@@ -9,7 +9,9 @@ class NetMindConfig:
     """
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or "b3e08a955ca24e9e80ffd7f073c2a010"
+        if not api_key:
+            raise ValueError("NetMind API key is required")
+        self.api_key = api_key
         self.base_url = "https://api.netmind.ai/inference-api/openai/v1"
         self.model_name = "openai/gpt-oss-20b"
         self.tts_model = "ResembleAI/Chatterbox"  # NetMind TTS model
