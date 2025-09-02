@@ -22,13 +22,14 @@ from typing import List, Dict, Any
 class NetMindConfig:
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = "https://api.netmind.ai/v1"
+        self.base_url = "https://api.netmind.ai/inference-api/openai/v1"
+        self.tts_url = "https://api.netmind.ai/inference-api/openai/v1/audio/speech"
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
     
-    def chat_completion(self, messages: List[Dict], model: str = "gpt-oss-20b"):
+    def chat_completion(self, messages: List[Dict], model: str = "openai/gpt-oss-20b"):
         """Simple chat completion for content generation"""
         try:
             import json as json_lib
@@ -66,26 +67,59 @@ class NetMindConfig:
                         location = potential_location
                         break
         
-        return f"""Welcome to {location}! 🏛️
-
-**Historical Highlights**
-This magnificent city has stood as a testament to human civilization for centuries. From ancient foundations to modern marvels, every street tells a story of triumph, innovation, and cultural evolution.
-
-**Architectural Wonders**
-As you explore, you'll notice the stunning blend of architectural styles that define this cityscape. Gothic spires reach toward the sky while modern glass structures reflect the ambitions of contemporary design.
-
-**Cultural Treasures**
-The local culture is rich with traditions passed down through generations. Street markets buzz with activity, local artisans display their crafts, and the aroma of traditional cuisine fills the air.
-
-**Culinary Delights**
-No visit would be complete without sampling the local gastronomy. From time-honored recipes to innovative fusion dishes, the culinary scene here offers something for every palate.
-
-**Hidden Gems**
-Beyond the famous landmarks, discover quiet courtyards, charming cafes, and local gathering spots where residents share stories and laughter.
-
-*Note: This is a demo tour generated when the NetMind API is unavailable. For personalized, location-specific content, please ensure proper API connectivity.*
-
-Enjoy your exploration! 🌟"""
+        return f"""Welcome to {location}! 
+ 
+ **Historical Highlights**
+ This magnificent city has stood as a testament to human civilization for centuries. From ancient foundations to modern marvels, every street tells a story of triumph, innovation, and cultural evolution.
+ 
+ **Architectural Wonders**
+ As you explore, you'll notice the stunning blend of architectural styles that define this cityscape. Gothic spires reach toward the sky while modern glass structures reflect the ambitions of contemporary design.
+ 
+ **Cultural Treasures**
+ The local culture is rich with traditions passed down through generations. Street markets buzz with activity, local artisans display their crafts, and the aroma of traditional cuisine fills the air.
+ 
+ **Culinary Delights**
+ No visit would be complete without sampling the local gastronomy. From time-honored recipes to innovative fusion dishes, the culinary scene here offers something for every palate.
+ 
+ **Hidden Gems**
+ Beyond the famous landmarks, discover quiet courtyards, charming cafes, and local gathering spots where residents share stories and laughter.
+ 
+ *Note: This is a demo tour generated when the NetMind API is unavailable. For personalized, location-specific content, please ensure proper API connectivity.*
+ 
+ Enjoy your exploration! 🌟"""
+    
+    def generate_audio(self, text: str, voice: str = "alloy") -> bytes:
+        """Generate audio using NetMind TTS API"""
+        try:
+            import json as json_lib
+            
+            # Map voice styles to NetMind TTS model
+            voice_mapping = {
+                "alloy": "ResembleAI/Chatterbox",
+                "nova": "ResembleAI/Chatterbox", 
+                "shimmer": "ResembleAI/Chatterbox"
+            }
+            
+            model = voice_mapping.get(voice, "ResembleAI/Chatterbox")
+            
+            response = requests.post(
+                self.tts_url,
+                headers=self.headers,
+                data=json_lib.dumps({
+                    "model": model,
+                    "input": text
+                }),
+                timeout=120
+            )
+            
+            if response.status_code == 200:
+                return response.content
+            else:
+                st.error(f"TTS API Error: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            st.error(f"TTS generation failed: {str(e)}")
+            return None
 
 # Simple Tour Manager for stlite
 class SimpleTourManager:
@@ -224,13 +258,44 @@ if st.button("🚀 Generate Tour", type="primary", use_container_width=True):
                 with st.expander("📝 Tour Content", expanded=True):
                     st.markdown(tour_content)
                 
-                # Audio generation note (since TTS is complex for stlite)
-                st.info("""
-                    🎵 **Audio Generation Note**: 
-                    In this browser-based version, audio generation is simplified. 
-                    For full TTS functionality, please use the server-based version.
-                    You can copy the text above and use any text-to-speech service.
-                """)
+                # Audio generation with NetMind TTS
+                st.markdown("### 🎵 Generate Audio Tour")
+                
+                voice_options = {
+                    "Friendly & Casual": "alloy",
+                    "Professional & Detailed": "nova", 
+                    "Enthusiastic & Energetic": "shimmer"
+                }
+                
+                selected_voice = voice_options.get(voice_style, "alloy")
+                
+                if st.button("🎤 Generate Audio", type="secondary", use_container_width=True):
+                    with st.spinner("Generating audio with NetMind TTS..."):
+                        try:
+                            # Generate audio using NetMind API
+                            audio_data = st.session_state.netmind_config.generate_audio(
+                                tour_content, selected_voice
+                            )
+                            
+                            if audio_data:
+                                st.success("✅ Audio generated successfully!")
+                                
+                                # Play audio
+                                st.audio(audio_data, format='audio/mp3')
+                                
+                                # Download option
+                                st.download_button(
+                                    label="💾 Download Audio",
+                                    data=audio_data,
+                                    file_name=f"{location.lower().replace(' ', '_')}_tour.mp3",
+                                    mime="audio/mp3"
+                                )
+                            else:
+                                st.error("Failed to generate audio. Please try again.")
+                                
+                        except Exception as e:
+                            st.error(f"Audio generation error: {str(e)}")
+                            st.info("You can still download the text version below.")
                 
                 # Download option for the text
                 st.download_button(
