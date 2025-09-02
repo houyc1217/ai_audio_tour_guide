@@ -5,7 +5,7 @@
 class NetMindAPI {
     constructor(apiKey) {
         this.apiKey = apiKey;
-        this.baseURL = 'https://api.netmind.ai/v1';
+        this.baseURL = 'https://api.netmind.ai/inference-api/openai/v1';
     }
 
     async generateTourContent(location, interests, duration, voiceStyle) {
@@ -46,7 +46,7 @@ class NetMindAPI {
                 'Authorization': `Bearer ${this.apiKey}`
             },
             body: JSON.stringify({
-                model: 'Qwen/Qwen2.5-72B-Instruct',
+                model: 'openai/gpt-oss-20b',
                 messages: [{
                     role: 'user',
                     content: prompt
@@ -68,23 +68,35 @@ class NetMindAPI {
         const response = await fetch(`${this.baseURL}/audio/speech`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${this.apiKey}`
             },
-            body: JSON.stringify({
-                model: 'netmind/Chatterbox',
-                input: text,
-                voice: this.getVoiceMapping(voiceStyle),
-                response_format: 'mp3',
-                speed: 1.0
-            })
+            body: (() => {
+                const formData = new FormData();
+                formData.append('model', 'ResembleAI/Chatterbox');
+                formData.append('input', text);
+                return formData;
+            })()
         });
 
         if (!response.ok) {
             throw new Error(`TTS API call failed: ${response.statusText}`);
         }
 
-        return await response.blob();
+        // NetMind API returns JSON with download URL
+        const responseData = await response.json();
+        const downloadUrl = responseData.result_download_url;
+        
+        if (!downloadUrl) {
+            throw new Error('Download URL not found in API response');
+        }
+        
+        // Download the actual audio file
+        const audioResponse = await fetch(downloadUrl);
+        if (!audioResponse.ok) {
+            throw new Error(`Audio download failed: ${audioResponse.statusText}`);
+        }
+        
+        return await audioResponse.blob();
     }
 
     getVoiceMapping(voiceStyle) {
