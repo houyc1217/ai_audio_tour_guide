@@ -3,12 +3,6 @@ import asyncio
 from manager import TourManager
 from netmind_config import setup_netmind_api, get_netmind_config, create_tts_audio, get_netmind_model
 import json
-import agents
-
-# Configure agents library to use NetMind client
-if 'NETMIND_API_KEY' in st.session_state and st.session_state['NETMIND_API_KEY']:
-    setup_netmind_api(st.session_state['NETMIND_API_KEY'])
-    agents.set_default_openai_client(get_netmind_model(), use_for_tracing=False)
 
 def generate_audio(text, voice="alloy", progress_callback=None):
     """
@@ -26,11 +20,23 @@ def generate_audio(text, voice="alloy", progress_callback=None):
         return None
 
 def run_async(func, *args, **kwargs):
-    try:
-        return asyncio.run(func(*args, **kwargs))
-    except RuntimeError:
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(func(*args, **kwargs))
+    """Run async function in Streamlit environment safely"""
+    import concurrent.futures
+    import threading
+    
+    def run_in_thread():
+        # Create a new event loop in a separate thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(func(*args, **kwargs))
+        finally:
+            loop.close()
+    
+    # Always use thread executor for Streamlit compatibility
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(run_in_thread)
+        return future.result()
 
 # Set page config for a better UI
 st.set_page_config(
@@ -57,8 +63,6 @@ with st.sidebar:
             # Setup NetMind API configuration
             setup_netmind_api(netmind_api_key)
             st.session_state["NETMIND_API_KEY"] = netmind_api_key
-            # Configure agents library to use NetMind client
-            agents.set_default_openai_client(get_netmind_model(), use_for_tracing=False)
             st.success("✅ NetMind API configured successfully")
             
             # Display current model information
@@ -136,17 +140,51 @@ if st.button("Generate Tour", type="primary"):
             with st.expander("Tour Content", expanded=True):
                 st.markdown(final_tour)
             
-            # Add a progress bar for audio generation
+            # Enhanced audio generation with better UX
             if st.session_state.get("NETMIND_API_KEY"):
                 import time
                 start_time = time.time()
-                progress_bar = st.progress(0)
-                status_text = st.empty()
                 
+                # Create containers for better layout
+                audio_container = st.container()
+                progress_container = st.container()
+                
+                with progress_container:
+                    st.markdown("### 🎵 Generating Audio Tour")
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    time_text = st.empty()
+                    
+                # Enhanced progress callback with time estimation
                 def update_progress(message, progress):
-                    progress_bar.progress(min(progress, 100))
-                    status_message = f"{message} | Estimated time: 5-10 minutes"
-                    status_text.markdown(f"**{status_message}**")
+                    elapsed_time = time.time() - start_time
+                    progress_val = min(max(progress, 0), 1.0)  # Ensure 0-1 range
+                    progress_bar.progress(progress_val)
+                    
+                    # Dynamic time estimation based on progress
+                    if progress_val > 0.1:
+                        estimated_total = elapsed_time / progress_val
+                        remaining_time = max(0, estimated_total - elapsed_time)
+                        time_str = f"⏱️ Estimated remaining: {int(remaining_time//60)}m {int(remaining_time%60)}s"
+                    else:
+                        time_str = "⏱️ Initializing audio generation..."
+                    
+                    # Progress stages with emojis
+                    stage_emojis = {
+                        "TTS attempt": "🔄",
+                        "Calling TTS API": "📡",
+                        "Downloading audio": "⬇️",
+                        "Audio generation completed": "✅"
+                    }
+                    
+                    emoji = "🎵"
+                    for stage, stage_emoji in stage_emojis.items():
+                        if stage.lower() in message.lower():
+                            emoji = stage_emoji
+                            break
+                    
+                    status_text.markdown(f"**{emoji} {message}**")
+                    time_text.markdown(f"*{time_str}*")
                 
                 try:
                     # Select appropriate voice parameter based on voice style
@@ -159,32 +197,81 @@ if st.button("Generate Tour", type="primary"):
                     voice = voice_map.get(voice_key, "alloy")
                     
                     tour_audio = generate_audio(final_tour, voice, update_progress)
+                    
                 except Exception as e:
-                    st.error(f"Error occurred during audio generation: {str(e)}. You can still view the text tour content above.")
+                    # Import TTS exceptions for specific error handling
+                    from netmind_config import TTSConnectionError, TTSTimeoutError, TTSAPIError, TTSQuotaError, TTSError
+                    
+                    # Provide user-friendly error messages based on exception type
+                    if isinstance(e, TTSConnectionError):
+                        st.error("🌐 **Network Connection Issue**")
+                        st.info("Unable to connect to the audio generation service. Please check your internet connection and try again.")
+                    elif isinstance(e, TTSTimeoutError):
+                        st.error("⏱️ **Request Timeout**")
+                        st.info("The audio generation is taking longer than expected. This might be due to high server load. Please try again in a few minutes.")
+                    elif isinstance(e, TTSQuotaError):
+                        st.error("📊 **API Quota Exceeded**")
+                        st.info("The daily limit for audio generation has been reached. Please try again tomorrow or contact support for increased limits.")
+                    elif isinstance(e, TTSAPIError):
+                        st.error("🔧 **Service Temporarily Unavailable**")
+                        st.info("The audio generation service is experiencing technical difficulties. Please try again later.")
+                    else:
+                        st.error("❌ **Audio Generation Failed**")
+                        st.info(f"An unexpected error occurred: {str(e)}. Please try again or contact support if the issue persists.")
+                    
+                    # Always show the fallback message
+                    st.success("✅ **Your text tour is ready above!** You can still enjoy the complete written tour content.")
                     tour_audio = None
                 finally:
-                    # Clean up progress bar
-                    progress_bar.empty()
-                    status_text.empty()
+                    # Graceful cleanup with completion message
+                    if tour_audio:
+                        progress_bar.progress(1.0)
+                        status_text.markdown("**✅ Audio generation completed successfully!**")
+                        time_text.markdown("*Ready to play*")
+                        time.sleep(1)  # Brief pause to show completion
+                    
+                    # Clean up progress indicators
+                    progress_container.empty()
                 
-                if tour_audio:
-                    # Display audio player with custom styling
-                    st.markdown("### Listen to Your Tour")
-                    st.audio(tour_audio, format="audio/mp3")
-                    
-                    # Add download button for the audio
-                    st.download_button(
-                        label="Download Audio Tour",
-                        data=tour_audio,
-                        file_name=f"{location.lower().replace(' ', '_')}_tour.mp3",
-                        mime="audio/mp3"
-                    )
-                    
-                    st.success("Audio tour generated successfully! Using NetMind Chatterbox TTS model")
-                else:
-                    # Friendly message when TTS fails
-                    st.warning("Audio generation failed")
-                    st.info("Please check your network connection or try again later. You can still view the complete text tour content above.")
+                # Display audio results in the audio container
+                with audio_container:
+                    if tour_audio:
+                        # Success state with enhanced UI
+                        st.markdown("### 🎧 Your Audio Tour is Ready!")
+                        
+                        # Audio player with custom styling
+                        st.audio(tour_audio, format="audio/mp3")
+                        
+                        # Enhanced download section
+                        col1, col2 = st.columns([2, 1])
+                        with col1:
+                            st.download_button(
+                                label="📥 Download Audio Tour",
+                                data=tour_audio,
+                                file_name=f"{location.lower().replace(' ', '_')}_tour.mp3",
+                                mime="audio/mp3",
+                                use_container_width=True
+                            )
+                        with col2:
+                            audio_size_mb = len(tour_audio) / (1024 * 1024)
+                            st.metric("File Size", f"{audio_size_mb:.1f} MB")
+                        
+                        # Success message with model info
+                        st.success("🎉 Audio tour generated successfully using NetMind Chatterbox TTS model!")
+                        
+                        # Usage tips
+                        with st.expander("🎵 Audio Tips", expanded=False):
+                            st.markdown("""
+                            - **Best Experience**: Use headphones for immersive audio
+                            - **Playback Speed**: Most browsers allow speed adjustment (0.5x - 2x)
+                            - **Download**: Save the audio file for offline listening
+                            - **Share**: The downloaded file can be shared with others
+                            """)
+                    else:
+                        # Enhanced failure state (only shown if no specific error was displayed)
+                        if 'tour_audio' in locals():
+                            st.markdown("### 📝 Text Tour Available")
+                            st.info("💡 **Tip**: While audio generation wasn't successful this time, your complete text tour is ready above. You can try generating audio again or enjoy reading the tour content.")
             else:
                 st.warning("Tip: To generate audio, please configure NetMind API key in the sidebar for voice synthesis functionality.")
                 st.info("You can still view the text tour content above. Voice synthesis uses NetMind's Chatterbox TTS model.")

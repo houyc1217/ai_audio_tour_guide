@@ -1,7 +1,8 @@
 from pydantic import BaseModel
-from agents import Agent, WebSearchTool
-from agents.model_settings import ModelSettings
-from netmind_config import get_netmind_model, get_netmind_model_name
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIChatModel
+from netmind_config import get_netmind_config, get_netmind_model
+import os
 
 ARCHITECTURE_AGENT_INSTRUCTIONS = ("""
 You are the Architecture agent for a self-guided audio tour system. Given a location and the areas of interest of user, your role is to:
@@ -23,13 +24,23 @@ Help users see and appreciate architectural details they might otherwise miss. M
 class Architecture(BaseModel):
     output: str
 
-architecture_agent = Agent(
-    name="ArchitectureAgent",
-    instructions=ARCHITECTURE_AGENT_INSTRUCTIONS,
-    model=get_netmind_model_name(),
-    tools=[WebSearchTool()],
-    model_settings=ModelSettings(tool_choice="auto")
-)
+# Architecture agent will be initialized when needed
+architecture_agent = None
+
+def get_architecture_agent():
+    global architecture_agent
+    if architecture_agent is None:
+        # Create OpenAI-compatible model for NetMind API
+        # Set environment variables for custom OpenAI endpoint
+        os.environ['OPENAI_BASE_URL'] = 'https://api.netmind.ai/inference-api/openai/v1'
+        os.environ['OPENAI_API_KEY'] = os.getenv('NETMIND_API_KEY') or ''
+        netmind_model = OpenAIChatModel('openai/gpt-oss-20b')
+        architecture_agent = Agent(
+            model=netmind_model,
+            system_prompt=ARCHITECTURE_AGENT_INSTRUCTIONS,
+            output_type=Architecture
+        )
+    return architecture_agent
 
 CULINARY_AGENT_INSTRUCTIONS = ("""
 You are the Culinary agent for a self-guided audio tour system. Given a location and the areas of interest of user, your role is to:
@@ -52,13 +63,23 @@ class Culinary(BaseModel):
     output: str
 
 
-culinary_agent = Agent(
-    name="CulinaryAgent",
-    instructions=CULINARY_AGENT_INSTRUCTIONS,
-    model=get_netmind_model_name(),
-    tools=[WebSearchTool()],
-    model_settings=ModelSettings(tool_choice="auto")
-)
+# Culinary agent will be initialized when needed
+culinary_agent = None
+
+def get_culinary_agent():
+    global culinary_agent
+    if culinary_agent is None:
+        # Create OpenAI-compatible model for NetMind API
+        # Set environment variables for custom OpenAI endpoint
+        os.environ['OPENAI_BASE_URL'] = 'https://api.netmind.ai/inference-api/openai/v1'
+        os.environ['OPENAI_API_KEY'] = os.getenv('NETMIND_API_KEY') or ''
+        netmind_model = OpenAIChatModel('openai/gpt-oss-20b')
+        culinary_agent = Agent(
+            model=netmind_model,
+            system_prompt=CULINARY_AGENT_INSTRUCTIONS,
+            output_type=Culinary
+        )
+    return culinary_agent
 
 CULTURE_AGENT_INSTRUCTIONS = ("""
 You are the Culture agent for a self-guided audio tour system. Given a location and the areas of interest of user, your role is to:
@@ -80,13 +101,23 @@ Focus on authentic cultural insights that help users appreciate local ways of li
 class Culture(BaseModel):
     output: str
 
-culture_agent = Agent(
-    name="CulturalAgent",
-    instructions=CULTURE_AGENT_INSTRUCTIONS,
-    model=get_netmind_model_name(),
-    tools=[WebSearchTool()],
-    model_settings=ModelSettings(tool_choice="auto")
-)
+# Culture agent will be initialized when needed
+culture_agent = None
+
+def get_culture_agent():
+    global culture_agent
+    if culture_agent is None:
+        # Create OpenAI-compatible model for NetMind API
+        # Set environment variables for custom OpenAI endpoint
+        os.environ['OPENAI_BASE_URL'] = 'https://api.netmind.ai/inference-api/openai/v1'
+        os.environ['OPENAI_API_KEY'] = os.getenv('NETMIND_API_KEY') or ''
+        netmind_model = OpenAIChatModel('openai/gpt-oss-20b')
+        culture_agent = Agent(
+            model=netmind_model,
+            system_prompt=CULTURE_AGENT_INSTRUCTIONS,
+            output_type=Culture
+        )
+    return culture_agent
 
 HISTORY_AGENT_INSTRUCTIONS = ("""
 You are the History agent for a self-guided audio tour system. Given a location and the areas of interest of user, your role is to:
@@ -108,13 +139,23 @@ Focus on making history come alive through engaging narratives. Keep description
 class History(BaseModel):
     output: str
 
-historical_agent = Agent(
-    name="HistoricalAgent",
-    instructions=HISTORY_AGENT_INSTRUCTIONS,
-    model=get_netmind_model_name(),
-    tools=[WebSearchTool()],
-    model_settings=ModelSettings(tool_choice="auto")
-)
+# Historical agent will be initialized when needed
+historical_agent = None
+
+def get_historical_agent():
+    global historical_agent
+    if historical_agent is None:
+        # Create OpenAI-compatible model for NetMind API
+        # Set environment variables for custom OpenAI endpoint
+        os.environ['OPENAI_BASE_URL'] = 'https://api.netmind.ai/inference-api/openai/v1'
+        os.environ['OPENAI_API_KEY'] = os.getenv('NETMIND_API_KEY') or ''
+        netmind_model = OpenAIChatModel('openai/gpt-oss-20b')
+        historical_agent = Agent(
+            model=netmind_model,
+            system_prompt=HISTORY_AGENT_INSTRUCTIONS,
+            output_type=History
+        )
+    return historical_agent
 
 ORCHESTRATOR_INSTRUCTIONS = ("""
 Your Role
@@ -191,11 +232,23 @@ class FinalTour(BaseModel):
     """A short conclusion of the Tour."""
 
 
-orchestrator_agent = Agent(
-    name="OrchestratorAgent",
-    instructions=ORCHESTRATOR_INSTRUCTIONS,
-    model=get_netmind_model_name(),
-)
+# Orchestrator agent will be initialized when needed
+orchestrator_agent = None
+
+def get_orchestrator_agent():
+    global orchestrator_agent
+    if orchestrator_agent is None:
+        # Create OpenAI-compatible model for NetMind API
+        # Set environment variables for custom OpenAI endpoint
+        os.environ['OPENAI_BASE_URL'] = 'https://api.netmind.ai/inference-api/openai/v1'
+        os.environ['OPENAI_API_KEY'] = os.getenv('NETMIND_API_KEY') or ''
+        netmind_model = OpenAIChatModel('openai/gpt-oss-20b')
+        orchestrator_agent = Agent(
+            model=netmind_model,
+            system_prompt=ORCHESTRATOR_INSTRUCTIONS,
+            output_type=FinalTour
+        )
+    return orchestrator_agent
 
 PLANNER_INSTRUCTIONS = ("""
 
@@ -294,8 +347,20 @@ class Planner(BaseModel):
     conclusion: float
 
 
-planner_agent = Agent(
-    name="PlannerAgent",
-    instructions=PLANNER_INSTRUCTIONS,
-    model=get_netmind_model_name(),
-)
+# Planner agent will be initialized when needed
+planner_agent = None
+
+def get_planner_agent():
+    global planner_agent
+    if planner_agent is None:
+        # Create OpenAI-compatible model for NetMind API
+        # Set environment variables for custom OpenAI endpoint
+        os.environ['OPENAI_BASE_URL'] = 'https://api.netmind.ai/inference-api/openai/v1'
+        os.environ['OPENAI_API_KEY'] = os.getenv('NETMIND_API_KEY') or ''
+        netmind_model = OpenAIChatModel('openai/gpt-oss-20b')
+        planner_agent = Agent(
+            model=netmind_model,
+            system_prompt=PLANNER_INSTRUCTIONS,
+            output_type=Planner
+        )
+    return planner_agent
